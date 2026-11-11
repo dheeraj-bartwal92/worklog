@@ -1,56 +1,119 @@
-# Welcome to your Expo app 👋
+# Work log (Quixta Ventures take-home)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Offline-first work log: drafts survive without network, an expired token is
+refreshed once, a submitted entry is never overwritten, entries open from a deep
+link, and the project is set up for EAS releases.
 
-## Get started
+- **Expo SDK:** 58 (`expo ~58.0.23`, `expo-router 58.0.30`, `jest-expo 58.0.14`,
+  `@testing-library/react-native 14.1.0`)
+- **Time spent:** <actual hours, e.g. "about 8 hours over 3 days">
+- **Docs:** [CONFLICTS.md](CONFLICTS.md), [RELEASE.md](RELEASE.md)
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Install and run
 
 ```bash
-npm run reset-project
+npm install
+npx expo start              # then press i for the iOS simulator
+npx expo start --web        # web
+npx expo run:ios            # development build (needed for the worklog:// link)
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Expo Go cannot open `worklog://` links, so the deep link needs a development
+build or web. Native folders are generated (`npx expo prebuild --clean`), not
+committed.
 
-### Other setup steps
+## Test
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+```bash
+npm test                    # Jest, no device needed
+npx tsc --noEmit            # type check
+```
 
-## Learn more
+`expo-secure-store` and AsyncStorage are mocked in `jest.setup.ts`, which also
+clears storage and resets the fake server before each test.
 
-To learn more about developing your project with Expo, look at the following resources:
+| Brief test | File |
+|---|---|
+| Submitted row | `__tests__/sync.test.ts` ("required test 1") |
+| One refresh | `__tests__/sync.test.ts` ("required test 2") |
+| Draft restore | `__tests__/draftRestore.test.tsx` (screen) and `__tests__/draftForm.test.ts` (storage helper) |
+| Detail route (optional) | `__tests__/entryDetail.test.tsx` |
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Also: `validation.test.ts` (domain rules) and `fakeServer.test.ts` (test handles).
 
-## Join the community
+## Deep link
 
-Join our community of developers creating universal apps.
+Scheme `worklog`. On iOS simulator:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+xcrun simctl openurl booted worklog://entries/srv_1      # warm or cold start
+xcrun simctl openurl booted worklog://entries/zzz        # "Entry not found"
+```
+
+On web: `/entries/srv_1`. Routes live in `src/app/` (the SDK 58 template
+default), so the detail route is `src/app/entries/[id].tsx`. The root layout
+seeds tokens and runs a first sync before rendering, so a cold start does not
+flash "Entry not found", and `initialRouteName: 'index'` makes Back go to the list.
+
+## Test handles (fake server)
+
+The API is a plain in-memory TypeScript module, not Expo API routes, because the
+brief asks for no real network. Handles are exported from `src/api/fakeServer.ts`:
+
+| Handle | Purpose |
+|---|---|
+| `setOnline(boolean)` | set the server online or offline |
+| `expireAccessToken()` | the next call returns 401 |
+| `failRetryAfterRefresh(boolean)` | the one retry after a refresh also returns 401 |
+| `getEntries()` | read the entries |
+| `getRefreshCount()` | how many times refresh ran |
+| `resetServer()` | extra, not in the brief: reset state in `beforeEach` |
+
+In development, a dev panel on the list screen (`__DEV__` only) wraps these
+handles, plus a button that queues a local edit for `srv_1`.
+
+## Structure
+
+```
+src/domain/    types and validation (no React)
+src/api/       fakeServer.ts, client.ts (401 -> one refresh -> one retry)
+src/storage/   kv (secure store / localStorage), tokens, draftForm, queue, serverCache
+src/sync.ts    sync engine (single-flight)
+src/data/      small contract the screens use
+src/screens/   EntryForm, EntryList, EntryDetail
+src/components/ DurationPicker, DevPanel
+src/app/       Expo Router routes (thin)
+```
+
+Storage: tokens in `expo-secure-store` (`access_token`, `refresh_token`); form
+(`draft_form`), queue and server cache in AsyncStorage. The list is the cached
+server snapshot plus the pending queue, so there is no second entries store.
+
+## Design notes
+
+- **Conflict rule** and my assumptions: see CONFLICTS.md.
+- **Refresh once:** the client does at most one refresh and one retry per
+  operation. A second 401 gives "Session expired" and no further refresh.
+  Overlapping syncs share one refresh (single-flight).
+- **Nothing dropped:** a queued operation is removed only after the server
+  answered. Offline or "Session expired" stops the loop and keeps the rest.
+- **Picker and validation:** duration uses a 15-minute picker; `validateDuration`
+  and `validateDate` still guard restored and queued data.
+
+## Known behaviour and limitations
+
+- The fake server resets on every launch, but tokens persist. After one refresh
+  the stored token is `access_2`, so the next launch causes one refresh during
+  the first sync.
+- On web, tokens fall back to `localStorage` (no secure store on web). The tokens
+  are fake.
+- No edit screen (the brief has none). A draft cannot be submitted later from
+  the UI.
+- No real project id: `app.json` and `eas.json` are configured, but no Expo
+  account was used and no build or update was run.
+- Not done: <list anything missing, e.g. extra tests for the duplicate warning
+  screen, partial queue failure and the 409 race; web check>.
+
+## AI tools
+
+- **Tools:** Claude for <planning, sync engine, tests, docs drafts>.

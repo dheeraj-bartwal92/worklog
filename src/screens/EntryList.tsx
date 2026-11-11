@@ -1,14 +1,11 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
-import { ListRow, loadRows, sync } from '../data/api';
+import { DevPanel } from '../components/DevPanel';
+import { ListRow, loadRows, sync, SyncResult } from '../data/api';
 import { formatDuration } from '../domain/types';
-
 export const MSG_WAITING = 'Waiting to sync';
-export const MSG_KEPT = 'Server copy kept';
-export const MSG_EXPIRED = 'Session expired';
-export const MSG_OFFLINE = 'Offline: changes are waiting to sync';
+const MSG_OFFLINE = 'Offline: changes are waiting to sync';
 
 export function EntryList() {
   const router = useRouter();
@@ -17,17 +14,22 @@ export function EntryList() {
 
   const refresh = useCallback(async () => setRows(await loadRows()), []);
 
-  // Reload whenever the list screen gains focus (e.g. back from the form).
-  useFocusEffect(useCallback(() => { void refresh(); }, [refresh]));
-
-  async function onSync() {
-    const result = await sync();
-    if (result.status === 'session_expired') setBanner(MSG_EXPIRED);
-    else if (result.status === 'offline') setBanner(MSG_OFFLINE);
-    else if (result.keptServerCopy.length) setBanner(MSG_KEPT);
-    else setBanner(null);
+  const runSync = useCallback(async () => {
+    try {
+      const r: SyncResult = await sync();
+      setBanner(r.status === 'offline' ? MSG_OFFLINE : r.notice);
+    } catch {
+      setBanner(null);
+    }
     await refresh();
-  }
+  }, [refresh]);
+
+  // One effect: show what is on the device now, then sync, then reload.
+  useFocusEffect(
+    useCallback(() => {
+      void refresh().then(runSync);
+    }, [refresh, runSync]),
+  );
 
   return (
     <View style={s.wrap}>
@@ -35,11 +37,12 @@ export function EntryList() {
         <Pressable testID="new-entry" style={s.btn} onPress={() => router.push('/new')}>
           <Text>New entry</Text>
         </Pressable>
-        <Pressable testID="sync-button" style={s.btn} onPress={onSync}>
+        <Pressable testID="sync-button" style={s.btn} onPress={runSync}>
           <Text>Sync</Text>
         </Pressable>
       </View>
       {banner && <Text testID="banner" style={s.banner}>{banner}</Text>}
+      <DevPanel/>
       <FlatList
         data={rows}
         keyExtractor={(r) => r.entry.id}

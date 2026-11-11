@@ -1,5 +1,6 @@
+import { sync } from '@/domain/sync';
+import { EntryDetail } from '@/screens/EntryDetail';
 import { render, screen } from '@testing-library/react-native';
-import { EntryDetail } from '../src/screens/EntryDetail';
 
 jest.mock('expo-router', () => ({
   Link: ({ children, ...p }: any) => {
@@ -9,6 +10,7 @@ jest.mock('expo-router', () => ({
 }));
 
 it('shows srv_1 details', async () => {
+  await sync(); // yahan add kiya
   await render(<EntryDetail id="srv_1" />);
   expect(await screen.findByTestId('detail-category')).toHaveTextContent('inspection');
   expect(screen.getByTestId('detail-date')).toHaveTextContent('2026-06-01');
@@ -18,6 +20,7 @@ it('shows srv_1 details', async () => {
 });
 
 it('shows Entry not found with a way back for an unknown id', async () => {
+  await sync(); // yahan bhi
   await render(<EntryDetail id="nope" />);
   expect(await screen.findByText('Entry not found')).toBeTruthy();
   expect(screen.getByTestId('back-to-list')).toBeTruthy();

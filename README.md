@@ -6,7 +6,7 @@ link, and the project is set up for EAS releases.
 
 - **Expo SDK:** 58 (`expo ~58.0.23`, `expo-router 58.0.30`, `jest-expo 58.0.14`,
   `@testing-library/react-native 14.1.0`)
-- **Time spent:** <actual hours, e.g. "about 8 hours over 3 days">
+- **Time spent:** about 6 hours, all on 11 November 2026.
 - **Docs:** [CONFLICTS.md](CONFLICTS.md), [RELEASE.md](RELEASE.md)
 
 ## Install and run

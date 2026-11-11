@@ -68,5 +68,5 @@ an edit that changes its note, run sync online. The server note is still
 
 - A submit that is repeated after a lost response is treated as already
   applied. A real API would need an idempotency key.
-- A draft cannot be submitted later from the UI (there is no edit screen). A
-  new entry can be saved as a draft or submitted directly.
+- A draft cannot be submitted later from the UI (there is no edit screen). 
+- A new entry can be saved as a draft or submitted directly.

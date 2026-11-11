@@ -117,3 +117,8 @@ server snapshot plus the pending queue, so there is no second entries store.
 ## AI tools
 
 - **Tools:** Claude for <planning, sync engine, tests, docs drafts>.
+
+- **Where I disagreed:** Claude described the conflict rule as "no merge, no
+  newer-wins" as if the brief said so. I checked the brief, it does not, so I
+  kept the rule close to the brief's wording and moved my extra decisions into a
+  separate "My assumptions" section in CONFLICTS.md.

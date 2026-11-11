@@ -1,47 +1,31 @@
-import { Entry } from '../domain/types';
+import { Entry } from '@/domain/types';
+import { enqueueOp, loadQueue } from '@/storage/queue';
+import { loadServerCache } from '@/storage/serverCache';
+
+export { sync } from '@/domain/sync';
+export type { SyncResult } from '@/domain/sync';
 
 export type Operation = { type: 'save_draft' | 'submit'; entry: Entry };
+export interface ListRow { entry: Entry; pending: boolean }
 
-export interface ListRow {
-  entry: Entry;
-  pending: boolean; // true = still in the queue, shows "Waiting to sync"
-}
+const newOpId = () => `op_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
-export interface SyncResult {
-  status: 'synced' | 'offline' | 'session_expired';
-  keptServerCopy: string[];
-}
-
-// TEMPORARY in-memory stub. Replaced by the real queue, fake server and sync engine.
-const server: Entry[] = [
-  { id: 'srv_1', category: 'inspection', date: '2026-06-01', durationMinutes: 60, note: 'Lobby', status: 'submitted' },
-];
-let queue: Operation[] = [];
-
-export async function enqueue(op: Operation): Promise<void> {
-  queue.push(op);
-}
-
-export async function loadEntries(): Promise<Entry[]> {
-  return [...server, ...queue.map((o) => o.entry)];
-}
+export const enqueue = (op: Operation) => enqueueOp({ opId: newOpId(), ...op });
 
 export async function loadRows(): Promise<ListRow[]> {
-  return [
-    ...server.map((entry) => ({ entry, pending: false })),
-    ...queue.map((o) => ({ entry: o.entry, pending: true })),
-  ];
+  const rows = new Map<string, ListRow>();
+  for (const e of await loadServerCache()) rows.set(e.id, { entry: e, pending: false });
+  for (const op of await loadQueue()) {
+    const server = rows.get(op.entry.id);
+    rows.set(op.entry.id, server?.entry.status === 'submitted'
+      ? { entry: server.entry, pending: true }
+      : { entry: op.entry, pending: true });
+  }
+  return [...rows.values()];
 }
+
+export const loadEntries = async (): Promise<Entry[]> => (await loadRows()).map((r) => r.entry);
 
 export async function getEntry(id: string): Promise<Entry | null> {
-  const rows = await loadRows();
-  return rows.find((r) => r.entry.id === id)?.entry ?? null;
-}
-
-export async function sync(): Promise<SyncResult> {
-  for (const op of queue) {
-    server.push({ ...op.entry, status: op.type === 'submit' ? 'submitted' : 'draft' });
-  }
-  queue = [];
-  return { status: 'synced', keptServerCopy: [] };
+  return (await loadRows()).find((r) => r.entry.id === id)?.entry ?? null;
 }

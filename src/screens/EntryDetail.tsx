@@ -1,8 +1,8 @@
+import { getEntry } from '@/data/api';
+import { Entry, formatDuration } from '@/domain/types';
 import { Link } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { getEntry } from '../data/api';
-import { Entry, formatDuration } from '../domain/types';
 
 export const MSG_NOT_FOUND = 'Entry not found';
 

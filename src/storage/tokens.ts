@@ -11,3 +11,8 @@ export async function ensureSeeded(): Promise<void> {
   if (!(await kv.get(ACCESS_KEY))) await kv.set(ACCESS_KEY, 'access_1');
   if (!(await kv.get(REFRESH_KEY))) await kv.set(REFRESH_KEY, 'refresh_ok');
 }
+
+export async function resetTokensForDev(): Promise<void> {
+  await kv.set(ACCESS_KEY, 'access_1');
+  await kv.set(REFRESH_KEY, 'refresh_ok');
+}

@@ -1,5 +1,5 @@
 import { sync } from '@/domain/sync';
-import { ensureSeeded } from '@/storage/tokens';
+import { ensureSeeded, resetTokensForDev } from '@/storage/tokens';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -13,7 +13,8 @@ export default function RootLayout() {
     let alive = true;
     (async () => {
       try {
-        await ensureSeeded();
+        if (__DEV__) await resetTokensForDev();
+        else await ensureSeeded();
         await sync(); // srv_1 cache mein aa jaye, cold start par "not found" na dikhe
       } catch {
       } finally {

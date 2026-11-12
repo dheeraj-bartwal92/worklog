@@ -67,7 +67,7 @@ const s = StyleSheet.create({
   wrap: { flex: 1, padding: 16 },
   bar: { flexDirection: 'row', gap: 8, marginBottom: 8 },
   btn: { borderWidth: 1, borderRadius: 6, padding: 10 },
-  banner: { color: '#8a5a00', marginBottom: 8 },
+  banner: { color: '#8a1000', marginBottom: 8, fontSize: 18 },
   row: { paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
   title: { fontWeight: '600' },
   waiting: { color: '#8a5a00' },

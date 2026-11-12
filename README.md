@@ -9,6 +9,7 @@ link, and the project is set up for EAS releases.
 - **Time spent:** about 6 hours, all on 11 November 2026.
 - **Docs:** [CONFLICTS.md](CONFLICTS.md), [RELEASE.md](RELEASE.md)
 
+- **Screen recording:** https://drive.google.com/drive/folders/1EbZeAbDR6ziNlY2hOF0Om3pNUh3vsdop?usp=sharing
 ## Install and run
 
 ```bash
